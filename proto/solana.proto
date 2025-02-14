@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package solana;
+
+option go_package = "pkg/grpc/solana";
+
+import "common.proto";
+
+message SolanaBlock {
+  string blockhash = 1;
+  uint64 slot = 2;
+  string parent_slot = 3;
+  uint64 timestamp = 4;
+  repeated SolanaTransaction transactions = 5;
+  string previous_blockhash = 6;
+  string rewards_root = 7;
+  BlockProductionInfo block_production = 8;
+}
+
+message BlockProductionInfo {
+  string leader = 1;
+  uint64 leader_reward = 2;
+}
+
+message SolanaTransaction {
+  string signature = 1;
+  repeated string account_keys = 2;
+  repeated SolanaInstruction instructions = 3;
+  uint64 slot = 4;
+  bool success = 5;
+  uint64 fee = 6;
+  repeated string logs = 7;
+  uint64 compute_units_consumed = 8;
+}
+
+message SolanaInstruction {
+  string program_id = 1;
+  repeated string accounts = 2;
+  bytes data = 3;
+}
+
+service SolanaService {
+  rpc GetLatestBlock(common.Empty) returns (SolanaBlock);
+  rpc StreamBlocks(common.Empty) returns (stream SolanaBlock);
+  rpc GetHistoricalBlocks(GetHistoricalBlocksRequest) returns (stream SolanaBlock);
+  rpc GetChainInfo(common.GetChainInfoRequest) returns (common.ChainInfo);
+}
+
+message GetHistoricalBlocksRequest {
+  uint64 start_slot = 1;
+  uint64 end_slot = 2;
+}

@@ -9,6 +9,14 @@
 # move said applications out of the umbrella.
 import Config
 
+config :core, Core.Repo,
+  database: "sylph",
+  username: "postgres",
+  password: "postgres",
+  hostname: "localhost"
+
+config :core , ecto_repos: [Core.Repo]
+
 # Sample configuration:
 #
 #     config :logger, :console,

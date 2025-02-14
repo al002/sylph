@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package ethereum;
+
+option go_package = "pkg/grpc/ethereum";
+
+import "common.proto";
+
+message EthereumBlock {
+  string hash = 1;
+  uint64 number = 2;
+  string parent_hash = 3;
+  uint64 timestamp = 4;
+  repeated EthereumTransaction transactions = 5;
+  string state_root = 6;
+  string transactions_root = 7;
+  string receipts_root = 8;
+  string miner = 9;
+  uint64 gas_used = 10;
+  uint64 gas_limit = 11;
+}
+
+message EthereumTransaction {
+  string hash = 1;
+  string from = 2;
+  string to = 3;
+  string value = 4;
+  uint64 block_number = 5;
+  uint64 gas = 6;
+  string gas_price = 7;
+  uint64 nonce = 8;
+  bytes input = 9;
+  uint32 type = 10; // 0 = legacy, 1 = EIP2930, 2 = EIP1559
+  // EIP1559 specific fields
+  string max_fee_per_gas = 11;
+  string max_priority_fee_per_gas = 12;
+}
+
+service EthereumService {
+  rpc GetLatestBlock(common.Empty) returns (EthereumBlock);
+  rpc StreamBlocks(common.Empty) returns (stream EthereumBlock);
+  rpc GetHistoricalBlocks(GetHistoricalBlocksRequest)
+      returns (stream EthereumBlock);
+  rpc GetChainInfo(common.GetChainInfoRequest) returns (common.ChainInfo);
+}
+
+message GetHistoricalBlocksRequest {
+  uint64 start_block = 1;
+  uint64 end_block = 2;
+}

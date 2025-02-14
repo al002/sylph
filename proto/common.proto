@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "pkg/grpc/common";
+
+message ChainInfo {
+  uint64 latest_block = 1;
+  uint64 earliest_block = 2;
+  string chain_id = 3;
+}
+
+message GetChainInfoRequest {}
+
+message Empty {}
