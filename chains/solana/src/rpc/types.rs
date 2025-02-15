@@ -25,6 +25,11 @@ pub struct Block {
     pub blockhash: String,
     pub parent_slot: u64,
     pub timestamp: i64,
+    pub previous_blockhash: String,
+    pub leader: String,
+    pub leader_reward: Option<u64>,
+    pub total_compute_units: u64,
+    pub total_fee: u64,
     pub transactions: Vec<EnrichedTransaction>,
 }
 

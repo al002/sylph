@@ -1,10 +1,14 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use std::{
     collections::HashSet,
+    str::FromStr,
     sync::{Arc, RwLock},
     time::Duration,
 };
-use tokio::{sync::{mpsc, oneshot, Mutex}, time::sleep};
+use tokio::{
+    sync::{mpsc, oneshot, Mutex},
+    time::sleep,
+};
 use tokio_stream::StreamExt;
 
 use solana_client::{
@@ -12,8 +16,8 @@ use solana_client::{
     rpc_config::RpcBlockConfig,
     rpc_response::SlotInfo,
 };
-use solana_sdk::clock::Slot;
-use solana_transaction_status::{EncodedTransaction, EncodedTransactionWithStatusMeta};
+use solana_sdk::{clock::Slot, pubkey::Pubkey};
+use solana_transaction_status::{option_serializer::OptionSerializer, EncodedTransaction, EncodedTransactionWithStatusMeta, RewardType};
 
 use super::{
     error::{RpcError, RpcResult},
@@ -182,6 +186,32 @@ impl SolanaRpcClient {
 
         let timestamp = self.get_block_time(slot).await?;
 
+        let leader_reward = block.rewards.as_ref().and_then(|rewards| {
+            rewards
+                .iter()
+                .find(|reward| reward.reward_type == Some(RewardType::Fee))
+                .map(|reward| reward.lamports as u64)
+        });
+        let (total_fee, total_compute_units) = block
+            .transactions
+            .as_ref()
+            .map(|txs| {
+                txs.iter().fold((0u64, 0u64), |(fee_sum, cu_sum), tx| {
+                    let fee = tx.meta.as_ref().map(|meta| meta.fee).unwrap_or(0);
+
+                    let compute_units = tx
+                        .meta
+                        .as_ref()
+                        .and_then(|meta| match meta.compute_units_consumed {
+                            OptionSerializer::Some(units) => Some(units),
+                            OptionSerializer::None | OptionSerializer::Skip => None,
+                        })
+                        .unwrap_or(0);
+
+                    (fee_sum + fee, cu_sum + compute_units)
+                })
+            })
+            .unwrap_or((0, 0));
         let transactions = convert_transactions(slot, block.transactions)?;
 
         Ok(Block {
@@ -189,6 +219,20 @@ impl SolanaRpcClient {
             blockhash: block.blockhash,
             parent_slot: block.parent_slot,
             timestamp,
+            previous_blockhash: block.previous_blockhash,
+            leader: block
+                .rewards
+                .as_ref()
+                .and_then(|rewards| {
+                    rewards
+                        .iter()
+                        .find(|reward| reward.reward_type == Some(RewardType::Fee))
+                        .map(|reward| reward.pubkey.clone())
+                })
+                .unwrap_or_default(),
+            leader_reward,
+            total_compute_units,
+            total_fee,
             transactions,
         })
     }
@@ -403,11 +447,9 @@ impl SolanaRpcClient {
         reconnect_delay: &mut Duration,
     ) {
         *current_endpoint = (*current_endpoint + 1) % endpoints.len();
-        
+
         let next_delay = reconnect_delay.as_secs() * 2;
-        *reconnect_delay = Duration::from_secs(
-            if next_delay > 60 { 60 } else { next_delay }
-        );
+        *reconnect_delay = Duration::from_secs(if next_delay > 60 { 60 } else { next_delay });
 
         sleep(*reconnect_delay).await;
     }
