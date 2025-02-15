@@ -15,7 +15,7 @@ defmodule Core.Schema.Solana.Instruction do
     belongs_to :transaction, Core.Schema.Solana.Transaction,
       references: :signature,
       type: :string
-    
+
     has_many :account_inputs, Core.Schema.Solana.InstructionAccount, foreign_key: :instruction_id
   end
 

@@ -1,3 +1,9 @@
+mod proto;
+mod rpc;
+//mod service;
+
+pub use proto::*;
+
 #[tokio::main]
 async fn main() -> Result<(), async_nats::Error> {
     let client = async_nats::connect("127.0.0.1").await?;

@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package solana;
+
+import "solana/types.proto";
+
+option go_package = "github.com/al002/sylph/chains/solana/proto";
+
+service SolanaService {
+  // Get block by slot
+  rpc GetBlock(GetBlockRequest) returns (GetBlockResponse) {}
+  
+  // Stream new blocks
+  rpc SubscribeNewBlocks(SubscribeNewBlocksRequest) returns (stream BlockData) {}
+  
+  // Get historical blocks
+  rpc GetBlockRange(GetBlockRangeRequest) returns (stream BlockData) {}
+}
+
+message GetBlockRequest {
+  int64 slot = 1;
+}
+
+message GetBlockResponse {
+  BlockData block_data = 1;
+}
+
+message SubscribeNewBlocksRequest {
+  // Optional starting slot
+  int64 start_slot = 1;
+}
+
+message GetBlockRangeRequest {
+  int64 start_slot = 1;
+  int64 end_slot = 2;
+}

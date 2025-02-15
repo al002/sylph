@@ -7,7 +7,7 @@ defmodule Core.Schema.Solana.InstructionAccount do
     field :is_signer, :boolean
     field :is_writable, :boolean
     field :order_index, :integer
-    
+
     timestamps(type: :utc_datetime)
 
     belongs_to :instruction, Core.Schema.Solana.Instruction

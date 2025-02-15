@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package ethereum;
+
+import "ethereum/types.proto";
+
+option go_package = "github.com/al002/sylph/chains/ethereum/proto";
+
+service EthereumService {
+  // Get block by number
+  rpc GetBlock(GetBlockRequest) returns (GetBlockResponse) {}
+  
+  // Stream new blocks
+  rpc SubscribeNewBlocks(SubscribeNewBlocksRequest) returns (stream BlockData) {}
+  
+  // Get historical blocks
+  rpc GetBlockRange(GetBlockRangeRequest) returns (stream BlockData) {}
+}
+
+message GetBlockRequest {
+  int64 block_number = 1;
+}
+
+message GetBlockResponse {
+  BlockData block_data = 1;
+}
+
+message SubscribeNewBlocksRequest {
+  // Optional starting block number
+  int64 start_block = 1;
+}
+
+message GetBlockRangeRequest {
+  int64 start_block = 1;
+  int64 end_block = 2;
+}
