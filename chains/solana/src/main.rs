@@ -1,6 +1,6 @@
 mod proto;
 mod rpc;
-//mod service;
+mod service;
 
 pub use proto::*;
 

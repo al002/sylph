@@ -22,6 +22,8 @@ solana-client = "~2.1.13"
 solana-sdk = "~2.1.13"
 solana-transaction-status = "~2.1.13"
 uuid = { version = "1.13", features = ["v4", "fast-rng", "macro-diagnostics"] }
+lazy_static = "1.5"
+spl-token = "7.0"
 
 
 [build-dependencies]

@@ -134,7 +134,7 @@ pub enum SlotUpdate {
 
 pub struct Subscription {
     id: String,
-    rx: mpsc::Receiver<SlotUpdate>,
+    pub rx: mpsc::Receiver<SlotUpdate>,
     cancel: Option<oneshot::Sender<()>>,
 }
 
