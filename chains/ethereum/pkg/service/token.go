@@ -13,6 +13,10 @@ var (
 )
 
 func processTokenTransfer(log *types.Log) *pb.TokenTransfer {
+  if len(log.Topics) == 0 {
+    return nil
+  }
+
 	switch {
 	case len(log.Topics) >= 3 && log.Topics[0] == transferEventSig:
 		// ERC20/ERC721 Transfer
@@ -24,7 +28,7 @@ func processTokenTransfer(log *types.Log) *pb.TokenTransfer {
 			TokenId:         log.Address.Hex(),
 			TransactionHash: log.TxHash.Hex(),
 		}
-	case log.Topics[0] == transferSingleSig:
+  case log.Topics[0] == transferSingleSig:
 		// ERC1155 TransferSingle
 		return processERC1155SingleTransfer(log)
 	case log.Topics[0] == transferBatchSig:

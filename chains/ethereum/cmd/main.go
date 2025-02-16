@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"strings"
+	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/al002/sylph/chains/ethereum/pkg/config"
 	"github.com/al002/sylph/chains/ethereum/pkg/pb"
 	"github.com/al002/sylph/chains/ethereum/pkg/rpc"
 	"github.com/al002/sylph/chains/ethereum/pkg/service"
@@ -15,34 +18,53 @@ import (
 	"google.golang.org/grpc"
 )
 
-var (
-	port      = flag.Int("port", 50051, "The server port")
-	endpoints = flag.String("endpoints", "https://eth-mainnet.g.alchemy.com/v2/demo", "Comma-separated list of Ethereum JSON-RPC endpoints")
-)
-
 func main() {
-  flag.Parse()
-  client, err := rpc.NewClient(strings.Split(*endpoints, ","))
-  if err != nil {
-    log.Fatalf("Failed to create Ethereum rpc client: %v", err)
-  }
-  defer client.Close()
+	portOverride := flag.Int("port", 50051, "Override server port (default from env)")
+	flag.Parse()
 
-  // create gRPC server
-  lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
-  if err != nil {
-    log.Fatalf("gRPC failed to listen on: %v", err)
-  }
+	cfg := config.Load()
 
-  grpcServer := grpc.NewServer()
-  ethService := service.NewEthereumService(client)
-  pb.RegisterEthereumServiceServer(grpcServer, ethService)
+	err := cfg.Validate()
 
-  log.Printf("Server listenining at %v", lis.Addr())
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("Invalid config: %v", err)
+	}
 
-  if err := grpcServer.Serve(lis); err != nil {
-    log.Fatalf("Failed to serve: %v", err)
-  }
+	if *portOverride > 0 {
+		cfg.GRPCServerPort = *portOverride
+	}
+
+	client, err := rpc.NewClient(
+		cfg.HTTPEndpoints,
+		cfg.WSEndpoints,
+	)
+	if err != nil {
+		log.Fatalf("Failed to create Ethereum rpc client: %v", err)
+	}
+	defer client.Close()
+
+	grpcServer := grpc.NewServer()
+	ethService := service.NewEthereumService(client)
+	pb.RegisterEthereumServiceServer(grpcServer, ethService)
+
+	// create gRPC server
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCServerPort))
+	if err != nil {
+		log.Fatalf("gRPC failed to listen on: %v", err)
+	}
+
+	go func() {
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+		<-sigCh
+		grpcServer.GracefulStop()
+	}()
+
+	log.Printf("Starting Ethereum gRPC server on %v", lis.Addr())
+
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("Failed to serve: %v", err)
+	}
 
 	// nc, _ := nats.Connect(nats.DefaultURL)
 	// defer nc.Close()
