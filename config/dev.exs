@@ -10,6 +10,10 @@ config :core, Core.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
+config :core,
+  ethereum_endpoint: "localhost:50051",
+  solana_endpoint: "localhost:50052"
+
 # Ethereum configuration
 config :core, :ethereum,
   enabled: true,
