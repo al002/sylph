@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -60,11 +62,25 @@ func main() {
 		grpcServer.GracefulStop()
 	}()
 
+  go func() {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+			status := client.HealthStatus()
+			json.NewEncoder(w).Encode(status)
+		})
+
+		healthAddr := fmt.Sprintf(":%d", cfg.GRPCServerPort+1)
+		log.Printf("Starting health check server on %s", healthAddr)
+		if err := http.ListenAndServe(healthAddr, mux); err != nil {
+			log.Printf("Health check server failed: %v", err)
+		}
+	}()
+
 	log.Printf("Starting Ethereum gRPC server on %v", lis.Addr())
 
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
-	}
+	}	
 
 	// nc, _ := nats.Connect(nats.DefaultURL)
 	// defer nc.Close()

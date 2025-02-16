@@ -43,7 +43,11 @@ func (s *EthereumService) SubscribeNewBlocks(req *pb.SubscribeNewBlocksRequest, 
 	ctx := stream.Context()
 	headers := make(chan *types.Header)
 
-	wsClient := s.client.WSClient()
+	wsClient, err := s.client.WSClient()
+	if err != nil {
+		return err
+	}
+
 	if wsClient == nil {
 		return status.Error(codes.Unavailable, "no WebSocket endpoints available")
 	}
@@ -115,7 +119,10 @@ func (s *EthereumService) GetBlockRange(req *pb.GetBlockRangeRequest, stream pb.
 }
 
 func (s *EthereumService) fetchBlockData(ctx context.Context, blockNum *big.Int) (*pb.BlockData, error) {
-	client := s.client.CurrentClient()
+	client, err := s.client.CurrentClient()
+	if err != nil {
+		return nil, err
+	}
 
 	block, err := client.BlockByNumber(ctx, blockNum)
 	if err != nil {
@@ -159,7 +166,13 @@ func (s *EthereumService) fetchBlockData(ctx context.Context, blockNum *big.Int)
 
 func (s *EthereumService) getBlockReceipts(ctx context.Context, blockHash common.Hash) ([]*types.Receipt, error) {
 	var receipts []*types.Receipt
-	err := s.client.CurrentClient().Client().CallContext(
+	client, err := s.client.CurrentClient()
+
+	if err != nil {
+		return nil, err
+	}
+
+	client.Client().CallContext(
 		ctx,
 		&receipts,
 		"eth_getBlockReceipts",

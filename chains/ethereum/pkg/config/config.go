@@ -16,30 +16,31 @@ const (
 )
 
 const (
-	EnvDevelopment = "development"
-	EnvProduction  = "production"
+	DefaultHealthCheckInterval = 30 // seconds
 )
 
 type Config struct {
-	Env            string
-	GRPCServerPort int
-	LogLevel       string
-	HTTPEndpoints  []string
-	WSEndpoints    []string
+	Env                 string
+	GRPCServerPort      int
+	LogLevel            string
+	HTTPEndpoints       []string
+	WSEndpoints         []string
+	HealthCheckInterval int
 }
 
 func Load() *Config {
 	return &Config{
-		Env:            getEnv(envPrefix+"ENV", DefaultEnv),
-		GRPCServerPort: getEnvInt(envPrefix+"PORT", DefaultPort),
-		LogLevel:       getEnv(envPrefix+"LOG_LEVEL", DefaultLogLevel),
-		HTTPEndpoints:  parseEndpoints(getEnv(envPrefix+"HTTP_ENDPOINTS", defaultEndpoints("http"))),
-		WSEndpoints:    parseEndpoints(getEnv(envPrefix+"WS_ENDPOINTS", defaultEndpoints("ws"))),
+		Env:                 getEnv(envPrefix+"ENV", DefaultEnv),
+		GRPCServerPort:      getEnvInt(envPrefix+"PORT", DefaultPort),
+		LogLevel:            getEnv(envPrefix+"LOG_LEVEL", DefaultLogLevel),
+		HTTPEndpoints:       parseEndpoints(getEnv(envPrefix+"HTTP_ENDPOINTS", defaultEndpoints("http"))),
+		WSEndpoints:         parseEndpoints(getEnv(envPrefix+"WS_ENDPOINTS", defaultEndpoints("ws"))),
+		HealthCheckInterval: getEnvInt(envPrefix+"HEALTH_CHECK_INTERVAL", DefaultHealthCheckInterval),
 	}
 }
 
 func (c *Config) Validate() error {
-  return validateEndpoints(c.HTTPEndpoints)
+	return validateEndpoints(c.HTTPEndpoints)
 }
 
 func validateEndpoints(endpoints []string) error {
