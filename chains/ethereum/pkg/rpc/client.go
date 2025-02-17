@@ -189,20 +189,42 @@ func (c *Client) NextWSClient() {
 }
 
 func (c *Client) ChainID() (*big.Int, error) {
-	client, err := c.CurrentClient()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get client: %w", err)
+	if err := c.initializeClients(); err != nil {
+		return nil, fmt.Errorf("failed to initialize clients: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	var lastErr error
 
-	chainID, err := client.ChainID(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get chain ID: %w", err)
+	for i := 0; i < len(c.httpClients); i++ {
+		client := c.httpClients[i].client
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		chainID, err := client.ChainID(ctx)
+		if err == nil {
+			return chainID, nil
+		}
+		lastErr = err
 	}
 
-	return chainID, nil
+	return nil, fmt.Errorf("failed to get chain ID from any client: %w", lastErr)
+
+}
+
+func (c *Client) initializeClients() error {
+	if len(c.httpClients) > 0 && c.httpClients[0].isHealthy.Load() {
+		return nil
+	}
+
+	c.checkClientsHealth(c.httpClients)
+
+	for _, client := range c.httpClients {
+		if client.isHealthy.Load() {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("no healthy clients available after initialization")
 }
 
 func (c *Client) HealthStatus() map[string]interface{} {
