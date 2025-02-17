@@ -1,47 +1,34 @@
 defmodule Core.GRPC.ClientManager do
   use GenServer
-
   require Logger
 
-  defstruct [:ethereum_channel, :solana_channel]
+  @ethereum_manager_name :ethereum_grpc_manager
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  def get_ethereum_channel do
-    GenServer.call(__MODULE__, :get_ethereum_channel)
-  end
-
-  def get_solana_channel do
-    GenServer.call(__MODULE__, :get_solana_channel)
-  end
-
+  @impl true
   def init(opts) do
-    eth_endpoint = Keyword.get(opts, :ethereum_endpoint, "localhost:50051")
-    # sol_endpoint = Keyword.get(opts, :solana_endpoint, "localhost:50052")
+    {:ok, _pid} =
+      Core.GRPC.ConnectionManager.start_link(@ethereum_manager_name,
+        endpoint: Keyword.fetch!(opts, :ethereum_endpoint),
+        max_retries: 5,
+        health_check_interval: 10_000
+      )
 
-    {:ok, eth_channel} = GRPC.Stub.connect(eth_endpoint)
-    # {:ok, sol_channel} = GRPC.Stub.connect(sol_endpoint)
-
-    state = %__MODULE__{
-      ethereum_channel: eth_channel,
-      # solana_channel: sol_channel
-    }
-
-    {:ok, state}
+    {:ok, %{}}
   end
 
-  def handle_call(:get_ethereum_channel, _from, state) do
-    {:reply, state.ethereum_channel, state}
+  def get_ethereum_channel do
+    case Core.GRPC.ConnectionManager.get_channel(@ethereum_manager_name) do
+      {:ok, _channel} = success -> success
+      {:error, :not_connected} = error -> error
+    end
   end
 
-  def handle_call(:get_solana_channel, _from, state) do
-    {:reply, state.solana_channel, state}
-  end
-
-  def terminate(_reason, state) do
-    GRPC.Stub.disconnect(state.ethereum_channel)
-    # GRPC.Stub.disconnect(state.solana_channel)
+  def get_ethereum_status do
+    Core.GRPC.ConnectionManager.get_status(@ethereum_manager_name)
   end
 end
+

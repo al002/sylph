@@ -10,6 +10,7 @@ defmodule Core.Application do
     children = [
       # Starts a worker by calling: Core.Worker.start_link(arg)
       # {Core.Worker, arg}
+      Core.Telemetry.Supervisor,
       Core.Repo,
       Core.NatsHandler,
       {Core.GRPC.ClientManager, [

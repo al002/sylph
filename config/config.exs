@@ -9,10 +9,18 @@
 # move said applications out of the umbrella.
 import Config
 
-config :core , ecto_repos: [Core.Repo]
+config :core, ecto_repos: [Core.Repo]
 
-config :core, :chains,
-  enabled: ["ethereum", "solana"]
+config :core, :telemetry,
+  disabled_metrics: [],
+  report_interval: 10_000
+
+config :core, :grpc,
+  ethereum: [
+    endpoint: System.get_env("ETH_GRPC_ENDPOINT", "localhost:50051"),
+    max_retries: 5,
+    health_check_interval: 10_000
+  ]
 
 import_config "#{config_env()}.exs"
 
