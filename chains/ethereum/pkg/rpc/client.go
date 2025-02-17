@@ -18,11 +18,13 @@ const (
 )
 
 type HealthyClient struct {
-	client    *ethclient.Client
-	endpoint  string
-	isHealthy atomic.Bool
-	lastCheck atomic.Int64 // Unix timestamp
-	latency   atomic.Int64 // in milliseconds
+	client       *ethclient.Client
+	endpoint     string
+	isHealthy    atomic.Bool
+	lastCheck    atomic.Int64 // Unix timestamp
+	latency      atomic.Int64 // in milliseconds
+	failureCount atomic.Int32
+	successCount atomic.Int32
 }
 
 type Client struct {
@@ -103,6 +105,15 @@ func (c *Client) checkClientsHealth(clients []*HealthyClient) {
 		wg.Add(1)
 		go func(hc *HealthyClient) {
 			defer wg.Done()
+
+			if failures := hc.failureCount.Load(); failures > 0 {
+				backoff := time.Duration(1<<uint(failures)) * time.Second
+				if backoff > 30*time.Second {
+					backoff = 30 * time.Second
+				}
+				time.Sleep(backoff)
+			}
+
 			ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
 			defer cancel()
 
@@ -110,7 +121,15 @@ func (c *Client) checkClientsHealth(clients []*HealthyClient) {
 			_, err := hc.client.ChainID(ctx)
 			latency := time.Since(start).Milliseconds()
 
-			hc.isHealthy.Store(err == nil)
+			if err == nil {
+				hc.isHealthy.Store(true)
+				hc.successCount.Add(1)
+				hc.failureCount.Store(0)
+			} else {
+				hc.isHealthy.Store(false)
+				hc.failureCount.Add(1)
+			}
+
 			hc.lastCheck.Store(time.Now().Unix())
 			hc.latency.Store(latency)
 		}(hc)
@@ -141,25 +160,28 @@ func (c *Client) WSClient() (*ethclient.Client, error) {
 }
 
 func (c *Client) getHealthyClient(clients []*HealthyClient, current *atomic.Int32) (*ethclient.Client, error) {
-	if len(clients) == 0 {
-		return nil, fmt.Errorf("no clients available")
+	candidates := make([]int, 0, len(clients))
+	for i, hc := range clients {
+		if hc.isHealthy.Load() {
+			candidates = append(candidates, i)
+		}
 	}
 
-	var retries int
-	for retries < maxRetries {
-		idx := int(current.Load() % int32(len(clients)))
-		hc := clients[idx]
+	if len(candidates) == 0 {
+		return nil, fmt.Errorf("no healthy clients available")
+	}
 
-		if hc.isHealthy.Load() {
+	cur := int(current.Add(0))
+
+	for offset := 0; offset < len(candidates); offset++ {
+		idx := (cur + offset) % len(clients)
+		if hc := clients[idx]; hc.isHealthy.Load() {
+			current.Store(int32(idx))
 			return hc.client, nil
 		}
-
-		// go next client
-		current.Add(1)
-		retries++
 	}
 
-	return nil, fmt.Errorf("no healthy clients available after %d retries", maxRetries)
+	return clients[candidates[0]].client, nil
 }
 
 func (c *Client) NextWSClient() {
