@@ -154,7 +154,7 @@ func (c *Client) getHealthyClient(clients []*HealthyClient, current *atomic.Int3
 			return hc.client, nil
 		}
 
-    // go next client
+		// go next client
 		current.Add(1)
 		retries++
 	}
@@ -166,21 +166,21 @@ func (c *Client) NextWSClient() {
 	c.wsCurrent.Add(1)
 }
 
-func (c *Client) ChainID() *big.Int {
+func (c *Client) ChainID() (*big.Int, error) {
 	client, err := c.CurrentClient()
-  if err != nil {
-    return big.NewInt(1)
-  }
+	if err != nil {
+		return nil, fmt.Errorf("failed to get client: %w", err)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	chainID, err := client.ChainID(ctx)
 	if err != nil {
-		// ethereum mainnet chain id
-		return big.NewInt(1)
+		return nil, fmt.Errorf("failed to get chain ID: %w", err)
 	}
 
-	return chainID
+	return chainID, nil
 }
 
 func (c *Client) HealthStatus() map[string]interface{} {
@@ -188,7 +188,7 @@ func (c *Client) HealthStatus() map[string]interface{} {
 	defer c.mu.RUnlock()
 
 	status := make(map[string]interface{})
-	
+
 	httpStatus := make([]map[string]interface{}, len(c.httpClients))
 	for i, hc := range c.httpClients {
 		httpStatus[i] = map[string]interface{}{
@@ -198,7 +198,7 @@ func (c *Client) HealthStatus() map[string]interface{} {
 			"latency":   hc.latency.Load(),
 		}
 	}
-	
+
 	wsStatus := make([]map[string]interface{}, len(c.wsClients))
 	for i, hc := range c.wsClients {
 		wsStatus[i] = map[string]interface{}{
@@ -208,7 +208,7 @@ func (c *Client) HealthStatus() map[string]interface{} {
 			"latency":   hc.latency.Load(),
 		}
 	}
-	
+
 	status["http"] = httpStatus
 	status["ws"] = wsStatus
 	return status

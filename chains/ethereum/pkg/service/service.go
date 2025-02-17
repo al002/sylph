@@ -20,11 +20,16 @@ type EthereumService struct {
 	signer types.Signer
 }
 
-func NewEthereumService(client *rpc.Client) *EthereumService {
+func NewEthereumService(client *rpc.Client) (*EthereumService, error) {
+	chainID, err := client.ChainID()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get chain ID: %w", err)
+	}
+
 	return &EthereumService{
 		client: client,
-		signer: types.NewLondonSigner(client.ChainID()),
-	}
+		signer: types.NewLondonSigner(chainID),
+	}, nil
 }
 
 func (s *EthereumService) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.GetBlockResponse, error) {

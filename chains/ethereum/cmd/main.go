@@ -46,7 +46,12 @@ func main() {
 	defer client.Close()
 
 	grpcServer := grpc.NewServer()
-	ethService := service.NewEthereumService(client)
+	ethService, err := service.NewEthereumService(client)
+
+	if err != nil {
+		log.Fatalf("Failed to create Ethereum service: %v", err)
+	}
+
 	pb.RegisterEthereumServiceServer(grpcServer, ethService)
 
 	// create gRPC server
@@ -62,7 +67,7 @@ func main() {
 		grpcServer.GracefulStop()
 	}()
 
-  go func() {
+	go func() {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 			status := client.HealthStatus()
@@ -80,7 +85,7 @@ func main() {
 
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
-	}	
+	}
 
 	// nc, _ := nats.Connect(nats.DefaultURL)
 	// defer nc.Close()
