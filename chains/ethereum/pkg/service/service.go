@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+   "google.golang.org/protobuf/types/known/emptypb"
 )
 
 type EthereumService struct {
@@ -32,7 +33,7 @@ func NewEthereumService(client *rpc.Client) (*EthereumService, error) {
 	}, nil
 }
 
-func (s *EthereumService) GetLatestBlock(ctx context.Context) (*pb.GetLatestBlockResponse, error) {
+func (s *EthereumService) GetLatestBlock(ctx context.Context, req *emptypb.Empty) (*pb.GetLatestBlockResponse, error) {
 	latestBlock, err := s.fetchLatestBlock(ctx)
 
 	if err != nil {

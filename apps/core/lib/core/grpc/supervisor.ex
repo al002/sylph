@@ -40,15 +40,15 @@ defmodule Core.GRPC.Supervisor do
       ),
 
       # Solana GRPC client
-      Supervisor.child_spec(
-        {Core.GRPC.Client,
-         [
-           key: :solana,
-           endpoint: get_solana_endpoint(),
-           max_retries: 5
-         ]},
-        id: :solana_grpc_client
-      )
+      # Supervisor.child_spec(
+      #   {Core.GRPC.Client,
+      #    [
+      #      key: :solana,
+      #      endpoint: get_solana_endpoint(),
+      #      max_retries: 5
+      #    ]},
+      #   id: :solana_grpc_client
+      # )
     ]
 
     Supervisor.init(children, strategy: :rest_for_one)

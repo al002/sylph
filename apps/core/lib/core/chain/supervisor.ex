@@ -22,10 +22,10 @@ defmodule Core.Chain.Supervisor do
         {Core.Chain.Syncer, [chain: :ethereum]},
         id: :ethereum_syncer
       ),
-      Supervisor.child_spec(
-        {Core.Chain.Syncer, [chain: :solana]},
-        id: :solana_syncer
-      )
+      # Supervisor.child_spec(
+      #   {Core.Chain.Syncer, [chain: :solana]},
+      #   id: :solana_syncer
+      # )
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

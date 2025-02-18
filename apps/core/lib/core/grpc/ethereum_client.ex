@@ -30,11 +30,11 @@ defmodule Core.GRPC.EthereumClient do
            execute_with_retry(fn ->
              Ethereum.EthereumService.Stub.get_latest_block(channel, request)
            end) do
-      {:ok, response.block_number}
+      {:ok, response.latest_block}
     else
       error ->
         Logger.error("Unexpected error getting latest block: #{inspect(error)}")
-        {:error, :unexpected_error, "Internal error occurred"}
+        {:error, error}
     end
   end
 

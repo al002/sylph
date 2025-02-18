@@ -76,11 +76,13 @@ defmodule Core.Chain.Syncer do
          {:ok, updated_state} <- initialize_sync_state(state, sync_status) do
       # Start both sync modes
       send(self(), {:start_sync, :historical})
-      send(self(), {:start_sync, :realtime})
+      # send(self(), {:start_sync, :realtime})
 
       {:noreply, updated_state}
     else
       {:error, reason} ->
+        Logger.error(reason)
+
         Logger.error("Failed to initialize syncer",
           chain: state.chain,
           reason: reason
@@ -137,8 +139,6 @@ defmodule Core.Chain.Syncer do
     {:reply, {:ok, status}, state}
   end
 
-  # Private Functions
-
   defp via_tuple(chain) do
     {:via, Registry, {Core.Chain.Registry, {__MODULE__, chain}}}
   end
@@ -160,11 +160,11 @@ defmodule Core.Chain.Syncer do
       {:ok, latest_block} ->
         attrs = %{
           chain_name: Atom.to_string(chain),
-          latest_block_number: latest_block,
+          latest_block_number: latest_block.block_number,
+          latest_block_hash: latest_block.hash,
           # Will be filled when block is processed
-          latest_block_hash: nil,
-          earliest_block_number: latest_block,
-          safe_block_number: latest_block,
+          earliest_block_number: latest_block.block_number,
+          safe_block_number: latest_block.block_number,
           sync_status: "syncing"
         }
 
@@ -431,4 +431,3 @@ defmodule Core.Chain.Syncer do
     Process.alive?(pid)
   end
 end
-

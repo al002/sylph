@@ -2,7 +2,7 @@ defmodule Core.Repo.Migrations.CreateMissingBlocks do
   use Ecto.Migration
 
   def change do
-    create table(:failed_blocks) do
+    create table(:missing_blocks) do
       add :chain, :string, null: false
       add :block_number, :bigint, null: false
       add :block_hash, :string
@@ -17,19 +17,19 @@ defmodule Core.Repo.Migrations.CreateMissingBlocks do
       timestamps(type: :utc_datetime)
     end
 
-    create unique_index(:failed_blocks, [:chain, :block_number])
-    create index(:failed_blocks, [:status])
-    create index(:failed_blocks, [:chain, :status])
-    create index(:failed_blocks, [:last_attempt_at])
+    create unique_index(:missing_blocks, [:chain, :block_number])
+    create index(:missing_blocks, [:status])
+    create index(:missing_blocks, [:chain, :status])
+    create index(:missing_blocks, [:last_attempt_at])
 
-    create constraint("failed_blocks", :valid_chain, check: "chain IN ('ethereum', 'solana')")
+    create constraint("missing_blocks", :valid_chain, check: "chain IN ('ethereum', 'solana')")
 
-    create constraint("failed_blocks", :valid_status,
+    create constraint("missing_blocks", :valid_status,
              check: "status IN ('pending', 'retrying', 'resolved', 'failed')"
            )
 
-    create constraint("failed_blocks", :valid_attempts, check: "attempts >= 1")
+    create constraint("missing_blocks", :valid_attempts, check: "attempts >= 1")
 
-    create constraint("failed_blocks", :valid_priority, check: "priority >= 0 AND priority <= 10")
+    create constraint("missing_blocks", :valid_priority, check: "priority >= 0 AND priority <= 10")
   end
 end
