@@ -4,6 +4,11 @@ package ethereum;
 
 option go_package = "github.com/al002/sylph/chains/ethereum/proto";
 
+message LatestBlock {
+  int64 block_number = 1;
+  string hash = 2;
+}
+
 message Block {
   int64 block_number = 1;
   string hash = 2;

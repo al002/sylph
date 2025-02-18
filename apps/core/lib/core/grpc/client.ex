@@ -58,7 +58,10 @@ defmodule Core.GRPC.Client do
   get connection channel
   """
   def get_channel(key) do
-    GenServer.call(via_tuple(key), :get_channel)
+    case Registry.lookup(Core.GRPC.Registry, {__MODULE__, key}) do
+      [{pid, _}] -> GenServer.call(pid, :get_channel)
+      [] -> {:error, :not_found}
+    end
   end
 
   @doc """
@@ -71,12 +74,13 @@ defmodule Core.GRPC.Client do
   # Server Callbacks
 
   @impl true
-  def handle_call(:get_channel, _from, %{channel: nil} = state) do
-    {:reply, {:error, :not_connected}, state}
+  def handle_call(:get_channel, _from, %{status: :connected, channel: channel} = state)
+      when not is_nil(channel) do
+    {:reply, {:ok, channel}, state}
   end
 
-  def handle_call(:get_channel, _from, %{channel: channel} = state) do
-    {:reply, {:ok, channel}, state}
+  def handle_call(:get_channel, _from, state) do
+    {:reply, {:error, :not_connected}, state}
   end
 
   def handle_call(:get_status, _from, state) do

@@ -1,3 +1,11 @@
+defmodule Ethereum.GetLatestBlockResponse do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.14.0", syntax: :proto3
+
+  field :latest_block, 1, type: Ethereum.LatestBlock, json_name: "latestBlock"
+end
+
 defmodule Ethereum.GetBlockRequest do
   @moduledoc false
 
@@ -35,6 +43,8 @@ defmodule Ethereum.EthereumService.Service do
   @moduledoc false
 
   use GRPC.Service, name: "ethereum.EthereumService", protoc_gen_elixir_version: "0.14.0"
+
+  rpc :GetLatestBlock, Google.Protobuf.Empty, Ethereum.GetLatestBlockResponse
 
   rpc :GetBlock, Ethereum.GetBlockRequest, Ethereum.GetBlockResponse
 

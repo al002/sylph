@@ -32,6 +32,18 @@ func NewEthereumService(client *rpc.Client) (*EthereumService, error) {
 	}, nil
 }
 
+func (s *EthereumService) GetLatestBlock(ctx context.Context) (*pb.GetLatestBlockResponse, error) {
+	latestBlock, err := s.fetchLatestBlock(ctx)
+
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to fetch latest block: %v", err)
+	}
+
+	return &pb.GetLatestBlockResponse{
+		LatestBlock: latestBlock,
+	}, nil
+}
+
 func (s *EthereumService) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.GetBlockResponse, error) {
 	blockData, err := s.fetchBlockData(ctx, big.NewInt(req.BlockNumber))
 
@@ -121,6 +133,26 @@ func (s *EthereumService) GetBlockRange(req *pb.GetBlockRangeRequest, stream pb.
 	default:
 		return nil
 	}
+}
+
+func (s *EthereumService) fetchLatestBlock(ctx context.Context) (*pb.LatestBlock, error) {
+	client, err := s.client.CurrentClient()
+	if err != nil {
+		return nil, err
+	}
+
+	header, err := client.HeaderByNumber(ctx, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	pbLatestBlock := &pb.LatestBlock{
+		BlockNumber: header.Number.Int64(),
+		Hash:        header.Hash().Hex(),
+	}
+
+	return pbLatestBlock, nil
 }
 
 func (s *EthereumService) fetchBlockData(ctx context.Context, blockNum *big.Int) (*pb.BlockData, error) {

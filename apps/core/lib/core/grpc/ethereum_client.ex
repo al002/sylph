@@ -20,6 +20,23 @@ defmodule Core.GRPC.EthereumClient do
   ]
 
   @telemetry_prefix [:core, :grpc, :ethereum]
+  
+  @client_key :ethereum
+
+  def get_latest_block() do
+    with {:ok, channel} <- get_channel(),
+         request <- build_latest_block_request(),
+         {:ok, response} <-
+           execute_with_retry(fn ->
+             Ethereum.EthereumService.Stub.get_latest_block(channel, request)
+           end) do
+      {:ok, response.block_number}
+    else
+      error ->
+        Logger.error("Unexpected error getting latest block: #{inspect(error)}")
+        {:error, :unexpected_error, "Internal error occurred"}
+    end
+  end
 
   @doc """
   Retrieves a single block by number.
@@ -95,11 +112,17 @@ defmodule Core.GRPC.EthereumClient do
     )
   end
 
-  # Private Functions
-
   defp get_channel do
-    ClientManager.get_ethereum_channel()
+    case Core.GRPC.Client.get_channel(@client_key) do
+      {:ok, channel} -> {:ok, channel}
+      {:error, :not_connected} = error -> error
+      error ->
+        Logger.error("Unexpected error getting channel: #{inspect(error)}")
+        {:error, :connection_error}
+    end
   end
+
+  defp build_latest_block_request(), do: %Google.Protobuf.Empty{}
 
   defp build_block_request(block_number) do
     %Ethereum.GetBlockRequest{block_number: block_number}
@@ -207,4 +230,3 @@ defmodule Core.GRPC.EthereumClient do
     )
   end
 end
-

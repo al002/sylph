@@ -13,6 +13,7 @@ defmodule Core.Application do
       Core.Infra.Supervisor,
       Core.GRPC.Supervisor,
       Core.Cache.Supervisor,
+      Core.Chain.Supervisor,
       Core.DataProcessor.Supervisor,
       # Core.Telemetry.Supervisor,
       # Core.Repo,

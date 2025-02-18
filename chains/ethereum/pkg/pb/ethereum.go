@@ -12,6 +12,7 @@ type (
 
 // Message types
 type (
+	LatestBlock   = pb.LatestBlock
 	Block         = pb.Block
 	Transaction   = pb.Transaction
 	Log           = pb.Log
@@ -21,6 +22,7 @@ type (
 
 // Request/Response types
 type (
+	GetLatestBlockResponse    = pb.GetLatestBlockResponse
 	GetBlockRequest           = pb.GetBlockRequest
 	GetBlockResponse          = pb.GetBlockResponse
 	SubscribeNewBlocksRequest = pb.SubscribeNewBlocksRequest

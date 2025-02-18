@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -19,6 +20,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	EthereumService_GetLatestBlock_FullMethodName     = "/ethereum.EthereumService/GetLatestBlock"
 	EthereumService_GetBlock_FullMethodName           = "/ethereum.EthereumService/GetBlock"
 	EthereumService_SubscribeNewBlocks_FullMethodName = "/ethereum.EthereumService/SubscribeNewBlocks"
 	EthereumService_GetBlockRange_FullMethodName      = "/ethereum.EthereumService/GetBlockRange"
@@ -28,6 +30,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type EthereumServiceClient interface {
+	GetLatestBlock(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetLatestBlockResponse, error)
 	// Get block by number
 	GetBlock(ctx context.Context, in *GetBlockRequest, opts ...grpc.CallOption) (*GetBlockResponse, error)
 	// Stream new blocks
@@ -42,6 +45,16 @@ type ethereumServiceClient struct {
 
 func NewEthereumServiceClient(cc grpc.ClientConnInterface) EthereumServiceClient {
 	return &ethereumServiceClient{cc}
+}
+
+func (c *ethereumServiceClient) GetLatestBlock(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetLatestBlockResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetLatestBlockResponse)
+	err := c.cc.Invoke(ctx, EthereumService_GetLatestBlock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *ethereumServiceClient) GetBlock(ctx context.Context, in *GetBlockRequest, opts ...grpc.CallOption) (*GetBlockResponse, error) {
@@ -96,6 +109,7 @@ type EthereumService_GetBlockRangeClient = grpc.ServerStreamingClient[BlockData]
 // All implementations must embed UnimplementedEthereumServiceServer
 // for forward compatibility.
 type EthereumServiceServer interface {
+	GetLatestBlock(context.Context, *emptypb.Empty) (*GetLatestBlockResponse, error)
 	// Get block by number
 	GetBlock(context.Context, *GetBlockRequest) (*GetBlockResponse, error)
 	// Stream new blocks
@@ -112,6 +126,9 @@ type EthereumServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedEthereumServiceServer struct{}
 
+func (UnimplementedEthereumServiceServer) GetLatestBlock(context.Context, *emptypb.Empty) (*GetLatestBlockResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLatestBlock not implemented")
+}
 func (UnimplementedEthereumServiceServer) GetBlock(context.Context, *GetBlockRequest) (*GetBlockResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBlock not implemented")
 }
@@ -140,6 +157,24 @@ func RegisterEthereumServiceServer(s grpc.ServiceRegistrar, srv EthereumServiceS
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&EthereumService_ServiceDesc, srv)
+}
+
+func _EthereumService_GetLatestBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EthereumServiceServer).GetLatestBlock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EthereumService_GetLatestBlock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EthereumServiceServer).GetLatestBlock(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _EthereumService_GetBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -189,6 +224,10 @@ var EthereumService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.EthereumService",
 	HandlerType: (*EthereumServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetLatestBlock",
+			Handler:    _EthereumService_GetLatestBlock_Handler,
+		},
 		{
 			MethodName: "GetBlock",
 			Handler:    _EthereumService_GetBlock_Handler,

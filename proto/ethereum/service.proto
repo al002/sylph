@@ -2,11 +2,13 @@ syntax = "proto3";
 
 package ethereum;
 
+import "google/protobuf/empty.proto";
 import "ethereum/types.proto";
 
 option go_package = "github.com/al002/sylph/chains/ethereum/proto";
 
 service EthereumService {
+  rpc GetLatestBlock(google.protobuf.Empty) returns (GetLatestBlockResponse) {}
   // Get block by number
   rpc GetBlock(GetBlockRequest) returns (GetBlockResponse) {}
   
@@ -15,6 +17,10 @@ service EthereumService {
   
   // Get historical blocks
   rpc GetBlockRange(GetBlockRangeRequest) returns (stream BlockData) {}
+}
+
+message GetLatestBlockResponse {
+  LatestBlock latest_block = 1;
 }
 
 message GetBlockRequest {
