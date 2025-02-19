@@ -12,7 +12,7 @@ defmodule Core.Chain.BlockRange do
   @type range :: {non_neg_integer(), non_neg_integer()}
   @type batch_size :: pos_integer()
 
-  @default_batch_size 50
+  @default_batch_size 500
   @max_batch_size 1000
   @min_batch_size 10
 

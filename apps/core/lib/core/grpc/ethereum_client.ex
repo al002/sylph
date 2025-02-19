@@ -105,11 +105,12 @@ defmodule Core.GRPC.EthereumClient do
   @spec get_block_range(block_number(), block_number()) :: Enumerable.t()
   def get_block_range(start_block, end_block)
       when is_integer(start_block) and is_integer(end_block) and start_block <= end_block do
-    Stream.resource(
-      fn -> init_range_stream(start_block, end_block) end,
-      &process_range_stream/1,
-      &cleanup_range_stream/1
-    )
+    init_range_stream(start_block, end_block)
+    # Stream.resource(
+    #   fn -> init_range_stream(start_block, end_block) end,
+    #   &process_range_stream/1,
+    #   &cleanup_range_stream/1
+    # )
   end
 
   defp get_channel do

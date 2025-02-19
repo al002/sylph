@@ -20,6 +20,8 @@ defmodule Core.Chain.Syncer do
   @type sync_mode :: :historical | :realtime
   @type block_number :: non_neg_integer()
 
+  @parallel_ranges 3
+
   defmodule State do
     @moduledoc false
     defstruct [
@@ -243,8 +245,42 @@ defmodule Core.Chain.Syncer do
   defp historical_sync_loop(chain, current_block, target_block) when current_block >= 0 do
     case BlockRange.calculate_next_range(chain, current_block, target_block) do
       {:ok, {start_block, end_block}, batch_size} ->
-        process_historical_batch(chain, start_block, end_block, batch_size)
-        historical_sync_loop(chain, start_block - 1, target_block)
+        ranges = BlockRange.split_range({start_block, end_block}, batch_size)
+
+        results =
+          ranges
+          |> Task.async_stream(
+            &process_block_range(chain, &1),
+            max_concurrency: @parallel_ranges,
+            ordered: true
+          )
+          |> Enum.reduce_while(
+            :ok,
+            fn
+              {:ok, :ok}, :ok -> {:cont, :ok}
+              {:ok, {:error, reason}}, _acc -> {:halt, {:error, reason}}
+              {:exit, reason}, _acc -> {:halt, {:error, reason}}
+            end
+          )
+
+        case results do
+          :ok ->
+            historical_sync_loop(chain, start_block - 1, target_block)
+
+          {:error, reason} ->
+            Logger.error("Historical sync failed",
+              chain: chain,
+              start_block: start_block,
+              end_block: end_block,
+              reason: reason
+            )
+
+            Process.sleep(:timer.seconds(5))
+            historical_sync_loop(chain, current_block, target_block)
+        end
+
+      # process_historical_batch(chain, start_block, end_block, batch_size)
+      # historical_sync_loop(chain, start_block - 1, target_block)
 
       {:error, :no_new_blocks} ->
         # Reached target, wait before checking again
@@ -262,6 +298,87 @@ defmodule Core.Chain.Syncer do
         Process.sleep(:timer.seconds(5))
         historical_sync_loop(chain, current_block, target_block)
     end
+  end
+
+  defp process_block_range(chain, {start_block, end_block}) do
+    Logger.debug("Processing block range",
+      chain: chain,
+      start_block: start_block,
+      end_block: end_block
+    )
+
+    case fetch_block_range(chain, start_block, end_block) do
+      {:ok, block_stream, _time} ->
+        process_block_stream(chain, block_stream, start_block, end_block)
+
+      {:error, reason} = error ->
+        Logger.error("Failed to fetch block range",
+          chain: chain,
+          start_block: start_block,
+          end_block: end_block,
+          reason: reason
+        )
+
+        error
+    end
+  end
+
+  defp process_block_stream(chain, block_stream, start_block, end_block) do
+    block_stream
+    |> Stream.chunk_every(50)
+    |> Enum.reduce_while(:ok, fn blocks, :ok ->
+      case submit_blocks_batch(chain, blocks) do
+        :ok -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      :ok ->
+        Logger.info("Successfully processed block range",
+          chain: chain,
+          start_block: start_block,
+          end_block: end_block
+        )
+
+        :ok
+
+      {:error, reason} = error ->
+        Logger.error("Failed to process block range",
+          chain: chain,
+          start_block: start_block,
+          end_block: end_block,
+          reason: reason
+        )
+
+        error
+    end
+  end
+
+  defp submit_blocks_batch(chain, blocks) do
+    blocks
+    |> Enum.reduce_while(:ok, fn
+      {:ok, block}, :ok ->
+        case Core.DataProcessor.WorkerPool.submit_task(
+               Core.DataProcessor.WorkerPool,
+               chain,
+               :block,
+               %{
+                 number: block.number,
+                 hash: block.hash,
+                 data: block
+               }
+             ) do
+          :ok -> {:cont, :ok}
+          error -> {:halt, error}
+        end
+
+      {:error, reason}, _acc ->
+        {:halt, {:error, reason}}
+    end)
+  end
+
+  defp fetch_block_range(:ethereum, start_block, end_block) do
+    Core.GRPC.EthereumClient.get_block_range(start_block, end_block)
   end
 
   defp realtime_sync_loop(chain, start_block) do
