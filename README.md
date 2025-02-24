@@ -86,7 +86,7 @@ echo "WS Endpoints:   $SYLPH_ETH_WS_ENDPOINTS"
 exec go run cmd/main.go
 ```
 
-Start exlixir client (interactive)
+Start elixir client (interactive)
 
 ```
 iex -S mix
@@ -94,4 +94,4 @@ iex -S mix
 
 ### Disclaimer
 
-Still in development, may have bug or crashes.
+Still in development, may have bugs or crashes.
